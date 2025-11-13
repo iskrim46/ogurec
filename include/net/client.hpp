@@ -1,6 +1,5 @@
 #pragma once
 
-#include "net/conn.hpp"
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -18,6 +17,8 @@
 #include <sys/uio.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#include "net/conn.hpp"
 
 namespace net {
 

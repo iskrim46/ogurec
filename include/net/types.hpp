@@ -1,16 +1,10 @@
 #pragma once
 
-#include <array>
-#include <cassert>
-#include <concepts>
-#include <cstddef>
-#include <cstdint>
-#include <cstdio>
-#include <cstring>
-#include <span>
 #include <string>
-#include <sys/types.h>
 #include <vector>
+#include <array>
+#include <span>
+#include <cstring>
 
 #include "util/bitset.hpp"
 #include "util/endian.hpp"
@@ -25,7 +19,7 @@ template <class T>
 concept packet = requires(T x) { x.packet_id; };
 
 template <class T>
-concept compressed_packet = requires(T x) { packet<T>&& x.compressed; };
+concept compressed_packet = packet<T> && requires(T x) { x.compressed; };
 
 template <class T>
 concept netmodule = requires(T x) { x.module_id; };

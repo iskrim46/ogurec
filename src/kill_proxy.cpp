@@ -1,29 +1,9 @@
-#include <arpa/inet.h>
-#include <bitset>
-#include <concepts>
-#include <cstdint>
-#include <fcntl.h>
-#include <format>
-#include <iostream>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <ostream>
-#include <stdlib.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/uio.h>
-#include <sys/wait.h>
 #include <thread>
-#include <unistd.h>
-#include <utility>
 
 #include "net/client.hpp"
 #include "net/conn.hpp"
 #include "net/server.hpp"
 #include "net/types.hpp"
-
-using net::packet::operator""_ns;
 
 template <typename T, T... ints>
 void forward_packets(net::conn& dst, net::conn& src, std::integer_sequence<T, ints...> int_seq)
@@ -47,7 +27,7 @@ int main(int argc, char* argv[])
 	auto proxy_conn = proxy.accept();
 
 	uint8_t slot;
-	server_conn.reg_handler<net::packet::accept>([=, &slot](auto& a) {
+	server_conn.reg_handler<net::packet::accept>([&slot](auto& a) {
 		slot = a.client_id;
 		return false;
 	});

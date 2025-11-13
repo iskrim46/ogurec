@@ -3,9 +3,10 @@
 #include <cstdint>
 #include <functional>
 #include <map>
-#include <netinet/in.h>
 #include <span>
 #include <vector>
+
+#include <netinet/in.h>
 
 #include "net/packet.hpp"
 
