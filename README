@@ -1,0 +1,3 @@
+WIP implementation of terraria protocol.
+
+`src / kill_proxy.cpp` is a working proxy with packet modification.
