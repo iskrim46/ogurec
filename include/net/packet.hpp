@@ -62,7 +62,7 @@ std::vector<uint8_t> encode_packet(T& t)
 template <compressed_packet T>
 std::vector<uint8_t> encode_packet(T& t)
 {
-	static constexpr auto chunk_size = 1024; 
+	static constexpr auto chunk_size = 1024;
 	std::array<uint8_t, chunk_size> buffer;
 	std::vector<uint8_t> payload;
 
@@ -82,10 +82,10 @@ std::vector<uint8_t> encode_packet(T& t)
 	strm.next_in = raw_payload.data();
 	do {
 		strm.avail_out = chunk_size;
-		strm.next_out = reinterpret_cast<Bytef *>(buffer.data());
+		strm.next_out = reinterpret_cast<Bytef*>(buffer.data());
 		ret = deflate(&strm, flush);
 		assert(ret != Z_STREAM_ERROR);
-		payload.insert(payload.end(), buffer.begin(), buffer.end()-strm.avail_out);
+		payload.insert(payload.end(), buffer.begin(), buffer.end() - strm.avail_out);
 	} while (strm.avail_out == 0);
 
 	assert(strm.avail_in == 0); /* all input will be used */

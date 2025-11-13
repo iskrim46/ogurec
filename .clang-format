@@ -35,29 +35,7 @@ AlignConsecutiveShortCaseStatements:
   Enabled: false
   AcrossEmptyLines: false
   AcrossComments: false
-  AlignCaseArrows: false
   AlignCaseColons: false
-AlignConsecutiveTableGenBreakingDAGArgColons:
-  Enabled: false
-  AcrossEmptyLines: false
-  AcrossComments: false
-  AlignCompound: false
-  AlignFunctionPointers: false
-  PadOperators: false
-AlignConsecutiveTableGenCondOperatorColons:
-  Enabled: false
-  AcrossEmptyLines: false
-  AcrossComments: false
-  AlignCompound: false
-  AlignFunctionPointers: false
-  PadOperators: false
-AlignConsecutiveTableGenDefinitionColons:
-  Enabled: false
-  AcrossEmptyLines: false
-  AcrossComments: false
-  AlignCompound: false
-  AlignFunctionPointers: false
-  PadOperators: false
 AlignEscapedNewlines: Right
 AlignOperands: DontAlign
 AlignTrailingComments:
@@ -67,7 +45,6 @@ AllowAllArgumentsOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowBreakBeforeNoexceptSpecifier: Never
 AllowShortBlocksOnASingleLine: Empty
-AllowShortCaseExpressionOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortCompoundRequirementOnASingleLine: true
 AllowShortEnumsOnASingleLine: true
@@ -104,7 +81,6 @@ BraceWrapping:
 BreakAdjacentStringLiterals: true
 BreakAfterAttributes: Leave
 BreakAfterJavaFieldAnnotations: false
-BreakAfterReturnType: None
 BreakArrays: true
 BreakBeforeBinaryOperators: All
 BreakBeforeBraces: WebKit
@@ -112,10 +88,8 @@ BreakBeforeConceptDeclarations: Always
 BreakBeforeInlineASMColon: OnlyMultiline
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeComma
-BreakFunctionDefinitionParameters: false
 BreakInheritanceList: BeforeColon
 BreakStringLiterals: true
-BreakTemplateDeclarations: MultiLine
 ColumnLimit: 0
 CommentPragmas: "^ IWYU pragma:"
 CompactNamespaces: false
@@ -171,15 +145,10 @@ IntegerLiteralSeparator:
   HexMinDigits: 0
 JavaScriptQuotes: Leave
 JavaScriptWrapImports: true
-KeepEmptyLines:
-  AtEndOfFile: false
-  AtStartOfBlock: true
-  AtStartOfFile: true
 LambdaBodyIndentation: Signature
 LineEnding: DeriveLF
 MacroBlockBegin: ""
 MacroBlockEnd: ""
-MainIncludeChar: Quote
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
 ObjCBinPackProtocolList: Auto
@@ -248,7 +217,6 @@ SpacesInLineCommentPrefix:
   Maximum: -1
 SpacesInParens: Never
 SpacesInParensOptions:
-  ExceptDoubleParentheses: false
   InConditionalStatements: false
   InCStyleCasts: false
   InEmptyParentheses: false
@@ -261,7 +229,6 @@ StatementMacros:
   - Q_UNUSED
   - QT_REQUIRE_VERSION
 TabWidth: 4
-TableGenBreakInsideDAGArg: DontBreak
 UseTab: ForIndentation
 VerilogBreakBetweenInstancePorts: true
 WhitespaceSensitiveMacros:

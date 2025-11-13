@@ -25,7 +25,7 @@ template <class T>
 concept packet = requires(T x) { x.packet_id; };
 
 template <class T>
-concept compressed_packet = requires(T x) { packet<T> && x.compressed; };
+concept compressed_packet = requires(T x) { packet<T>&& x.compressed; };
 
 template <class T>
 concept netmodule = requires(T x) { x.module_id; };
@@ -59,7 +59,7 @@ struct rgb {
 };
 
 struct death_reason {
-    enum class reason : int {
+	enum class reason : int {
 		Player = 0,
 		NPC,
 		Projectile,
@@ -71,7 +71,7 @@ struct death_reason {
 	};
 
 	bitset<8> reasons;
-	
+
 	int16_t player_index;
 	int16_t npc_index;
 	int16_t projectile_index;
@@ -126,7 +126,7 @@ void encode_field(std::vector<uint8_t>& data, std::array<T, sz>& f)
 }
 
 template <typename T>
-void encode_field(std::vector<uint8_t>& data, std::vector<T> &f)
+void encode_field(std::vector<uint8_t>& data, std::vector<T>& f)
 {
 	for (auto& e : f) {
 		encode_field(data, e);
@@ -134,7 +134,7 @@ void encode_field(std::vector<uint8_t>& data, std::vector<T> &f)
 }
 
 template <typename T>
-void encode_field(std::vector<uint8_t>& data, std::span<T> &f)
+void encode_field(std::vector<uint8_t>& data, std::span<T>& f)
 {
 	for (auto& e : f) {
 		encode_field(data, e);
@@ -142,14 +142,14 @@ void encode_field(std::vector<uint8_t>& data, std::span<T> &f)
 }
 
 template <unsigned int bits>
-void encode_field(std::vector<uint8_t>& data, bitset<bits> &f)
+void encode_field(std::vector<uint8_t>& data, bitset<bits>& f)
 {
 	for (auto& e : f) {
 		encode_field(data, e);
 	}
 }
 
-void encode_field(std::vector<uint8_t>& data, death_reason &f)
+void encode_field(std::vector<uint8_t>& data, death_reason& f)
 {
 	encode_field(data, f.reasons);
 	if (f.reasons[death_reason::reason::Player]) {
@@ -199,13 +199,11 @@ ssize_t decode_field(std::span<uint8_t> data, T& f)
 	return sizeof(T);
 }
 
-
 ssize_t decode_field(std::span<uint8_t> data, std::vector<uint8_t>& f)
-{	
+{
 	f.insert(f.begin(), data.begin(), data.end());
 	return f.size();
 }
-
 
 template <typename T, std::size_t sz>
 ssize_t decode_field(std::span<uint8_t> data, std::array<T, sz>& f)
@@ -220,7 +218,7 @@ ssize_t decode_field(std::span<uint8_t> data, std::array<T, sz>& f)
 	return offset;
 }
 
-ssize_t decode_field(std::span<uint8_t> data, death_reason &f)
+ssize_t decode_field(std::span<uint8_t> data, death_reason& f)
 {
 	int offset = 0;
 	offset += decode_field(data, f.reasons);
@@ -372,7 +370,7 @@ struct send_tile_data {
 	static constexpr uint8_t packet_id = 10;
 	static constexpr packet_flag compressed {};
 
-	//FIXME: implement
+	// FIXME: implement
 };
 
 struct spawn_player {
@@ -480,12 +478,12 @@ struct player_loadout {
 struct damage_player {
 	static constexpr uint8_t packet_id = 117;
 
-    uint8_t client_id;
+	uint8_t client_id;
 	death_reason reason;
-    int16_t damage;
-    uint8_t hit_direction;
-    uint8_t ty;
-    int8_t cooldown_counter;
+	int16_t damage;
+	uint8_t hit_direction;
+	uint8_t ty;
+	int8_t cooldown_counter;
 };
 
 template <uint8_t id>
