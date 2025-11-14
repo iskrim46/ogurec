@@ -1,13 +1,11 @@
 #pragma once
 
-#include <string>
-#include <vector>
 #include <array>
-#include <span>
 #include <cstring>
+#include <string>
+#include <unistd.h>
 
 #include "util/bitset.hpp"
-#include "util/endian.hpp"
 #include "version.hpp"
 
 namespace net {
@@ -75,183 +73,6 @@ struct death_reason {
 	uint8_t item_prefix;
 	std::string custom;
 };
-
-void encode_field(std::vector<uint8_t>& data, const std::string& f)
-{
-	auto bytes = reinterpret_cast<uint8_t const*>(f.data());
-	data.insert(data.end(), uint8_t(f.size()));
-	data.insert(data.end(), bytes, bytes + f.size());
-}
-
-template <std::integral T>
-void encode_field(std::vector<uint8_t>& data, T f)
-{
-	auto fixed = to_little(f);
-	auto* p = reinterpret_cast<uint8_t const*>(&fixed);
-	data.insert(data.end(), p, p + sizeof(T));
-}
-
-template <std::floating_point T>
-void encode_field(std::vector<uint8_t>& data, T f)
-{
-	auto x = reinterpret_cast<uint8_t*>(&f);
-	data.insert(data.end(), x, x + sizeof(T));
-}
-
-void encode_field(std::vector<uint8_t>& data, nstring& s)
-{
-	data.insert(data.end(), uint8_t(s.mode));
-	encode_field(data, s.s);
-}
-
-void encode_field(std::vector<uint8_t>& data, const rgb& f)
-{
-	encode_field(data, f.r);
-	encode_field(data, f.g);
-	encode_field(data, f.b);
-}
-
-template <typename T, std::size_t sz>
-void encode_field(std::vector<uint8_t>& data, std::array<T, sz>& f)
-{
-	for (auto& e : f) {
-		encode_field(data, e);
-	}
-}
-
-template <typename T>
-void encode_field(std::vector<uint8_t>& data, std::vector<T>& f)
-{
-	for (auto& e : f) {
-		encode_field(data, e);
-	}
-}
-
-template <typename T>
-void encode_field(std::vector<uint8_t>& data, std::span<T>& f)
-{
-	for (auto& e : f) {
-		encode_field(data, e);
-	}
-}
-
-template <unsigned int bits>
-void encode_field(std::vector<uint8_t>& data, bitset<bits>& f)
-{
-	for (auto& e : f) {
-		encode_field(data, e);
-	}
-}
-
-void encode_field(std::vector<uint8_t>& data, death_reason& f)
-{
-	encode_field(data, f.reasons);
-	if (f.reasons[death_reason::reason::Player]) {
-		encode_field(data, f.player_index);
-	}
-	if (f.reasons[death_reason::reason::NPC]) {
-		encode_field(data, f.npc_index);
-	}
-	if (f.reasons[death_reason::reason::Projectile]) {
-		encode_field(data, f.projectile_index);
-	}
-	if (f.reasons[death_reason::reason::Other]) {
-		encode_field(data, f.other_index);
-	}
-	if (f.reasons[death_reason::reason::ProjectileType]) {
-		encode_field(data, f.projectile_type);
-	}
-	if (f.reasons[death_reason::reason::Item]) {
-		encode_field(data, f.item_type);
-	}
-	if (f.reasons[death_reason::reason::ItemPrefix]) {
-		encode_field(data, f.item_prefix);
-	}
-	if (f.reasons[death_reason::reason::Custom]) {
-		encode_field(data, f.custom);
-	}
-}
-
-ssize_t decode_field(std::span<uint8_t> data, std::string& f)
-{
-	assert(data.size() > 0);
-	uint8_t size = uint8_t(data[0]); // FIXME: varint
-
-	assert(data.size() >= std::size_t(size + 1));
-
-	f.resize(size);
-	f.assign(reinterpret_cast<const char*>(data.data() + 1 /* FIXME: varint*/), size);
-	return size + 1;
-}
-
-template <std::integral T>
-ssize_t decode_field(std::span<uint8_t> data, T& f)
-{
-	assert(data.size() >= sizeof(T));
-	std::memcpy(&f, data.data(), sizeof(T));
-	f = to_little(f);
-	return sizeof(T);
-}
-
-ssize_t decode_field(std::span<uint8_t> data, std::vector<uint8_t>& f)
-{
-	f.insert(f.begin(), data.begin(), data.end());
-	return f.size();
-}
-
-template <typename T, std::size_t sz>
-ssize_t decode_field(std::span<uint8_t> data, std::array<T, sz>& f)
-{
-	assert(data.size() >= sizeof(T) * sz);
-
-	ssize_t offset = 0;
-	for (auto& e : f) {
-		offset += decode_field(data.subspan(offset), e);
-	}
-
-	return offset;
-}
-
-ssize_t decode_field(std::span<uint8_t> data, death_reason& f)
-{
-	int offset = 0;
-	offset += decode_field(data, f.reasons);
-	if (f.reasons[0]) {
-		offset += decode_field(data.subspan(offset), f.player_index);
-	}
-	if (f.reasons[1]) {
-		offset += decode_field(data.subspan(offset), f.npc_index);
-	}
-	if (f.reasons[2]) {
-		offset += decode_field(data.subspan(offset), f.projectile_index);
-	}
-	if (f.reasons[3]) {
-		offset += decode_field(data.subspan(offset), f.other_index);
-	}
-	if (f.reasons[4]) {
-		offset += decode_field(data.subspan(offset), f.projectile_type);
-	}
-	if (f.reasons[5]) {
-		offset += decode_field(data.subspan(offset), f.item_type);
-	}
-	if (f.reasons[6]) {
-		offset += decode_field(data.subspan(offset), f.item_prefix);
-	}
-	if (f.reasons[7]) {
-		offset += decode_field(data.subspan(offset), f.custom);
-	}
-
-	return offset;
-}
-ssize_t decode_field(std::span<uint8_t> data, rgb& f)
-{
-	assert(data.size() >= 3);
-
-	f.r = uint8_t(data[0]);
-	f.g = uint8_t(data[1]);
-	f.b = uint8_t(data[2]);
-	return 3;
-}
 
 struct conn_request {
 	static constexpr uint8_t packet_id = 1;
@@ -478,12 +299,6 @@ struct damage_player {
 	uint8_t hit_direction;
 	uint8_t ty;
 	int8_t cooldown_counter;
-};
-
-template <uint8_t id>
-struct raw {
-	static constexpr uint8_t packet_id = id;
-	std::vector<uint8_t> data;
 };
 
 inline nstring operator""_ns(const char* str, std::size_t)

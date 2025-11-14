@@ -9,15 +9,17 @@
 #include <netinet/in.h>
 
 #include "net/packet.hpp"
+#include "util/io.hpp"
 
 namespace net {
 class conn {
-	int sock_fd;
+	io::serialized_io<io::file_io> rw;
 
 	sockaddr_in conn_addr;
 	socklen_t conn_addr_size;
 
-	using handler_list = std::vector<std::function<bool(std::span<uint8_t>)>>;
+	using handler = std::function<bool(std::span<uint8_t>)>;
+	using handler_list = std::vector<handler>;
 	std::array<handler_list, 256> handlers;
 	std::map<uint16_t, handler_list> netmodule_handlers;
 
@@ -27,70 +29,18 @@ private:
 		uint16_t packet_size;
 		uint8_t id;
 
-		recv(packet_size);
-		recv(id);
+		rw.read(packet_size);
+		rw.read(id);
 
 		return { id, packet_size - 3 };
 	}
 
 public:
 	conn(int sock_fd, sockaddr_in conn_addr, socklen_t conn_addr_size)
-	    : sock_fd(sock_fd)
+	    : rw(io::file_io(sock_fd))
 	    , conn_addr(conn_addr)
 	    , conn_addr_size(conn_addr_size)
 	{
-	}
-
-	~conn()
-	{
-		close(sock_fd);
-	}
-
-	ssize_t send(std::span<uint8_t> data)
-	{
-		auto bytes = ::send(sock_fd, data.data(), data.size_bytes(), 0);
-		if (bytes < 0) {
-			throw std::runtime_error(strerror(errno));
-		}
-		return bytes;
-	}
-
-	template <std::integral T>
-	ssize_t send(T t)
-	{
-		t = to_little(t);
-		auto bytes = ::send(sock_fd, &t, sizeof(T), 0);
-		if (bytes < 0) {
-			throw std::runtime_error(strerror(errno));
-		}
-		return bytes;
-	}
-
-	ssize_t recv(std::span<uint8_t> data)
-	{
-		if (data.size_bytes() == 0) {
-			return 0;
-		}
-
-		auto bytes = ::recv(sock_fd, data.data(), data.size_bytes(), 0);
-		if (bytes <= 0) {
-			throw std::runtime_error(strerror(errno));
-		}
-		return bytes;
-	}
-
-	template <std::integral T>
-	ssize_t recv(T& t)
-	{
-		auto bytes = ::recv(sock_fd, &t, sizeof(T), 0);
-		if (bytes <= 0) {
-			throw std::runtime_error(strerror(errno));
-		}
-		t = to_little(t);
-		if (bytes != sizeof(T)) {
-			throw std::runtime_error(strerror(errno));
-		}
-		return bytes;
 	}
 
 	template <packet::packet T>
@@ -101,9 +51,15 @@ public:
 
 		if (len > 0) {
 			std::vector<uint8_t> payload(len);
-			recv(payload);
+			rw.read(payload);
 			decode_packet(payload, t);
 		}
+	}
+
+	template <class H>
+	void reg_handler(int id, H h)
+	{
+		handlers[id].push_back(h);
 	}
 
 	template <packet::packet P, typename H>
@@ -133,13 +89,21 @@ public:
 	template <packet::packet T>
 	void send_packet(T p)
 	{
-		auto payload = encode_packet(p);
+		send_packet(T::packet_id, encode_packet(p));
+	}
 
-		send(int16_t(payload.size() + 3));
-		send(T::packet_id);
+	void send_packet(uint8_t id, std::span<uint8_t> payload)
+	{
+		std::vector<uint8_t> packet_data;
+		auto buffer = io::serialized_io(io::buffered_io(packet_data));
+
+		buffer.write(int16_t(payload.size() + 3));
+		buffer.write(id);
 		if (payload.size() > 0) {
-			send(payload);
+			buffer.write(payload);
 		}
+
+		rw.write(packet_data);
 	}
 
 	bool handle_netmodule(std::span<uint8_t> payload)
@@ -170,7 +134,7 @@ public:
 		}
 
 		std::vector<uint8_t> payload(len);
-		recv(payload);
+		rw.read(payload);
 
 		// got netmodule
 		if (id == 82) {

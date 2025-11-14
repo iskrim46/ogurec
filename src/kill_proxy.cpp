@@ -1,3 +1,5 @@
+#include <cstdint>
+#include <span>
 #include <thread>
 
 #include "net/client.hpp"
@@ -5,14 +7,14 @@
 #include "net/server.hpp"
 #include "net/types.hpp"
 
-template <typename T, T... ints>
-void forward_packets(net::conn& dst, net::conn& src, std::integer_sequence<T, ints...> int_seq)
+void forward_packets(net::conn& dst, net::conn& src)
 {
-	(src.reg_handler<net::packet::raw<ints+1>>([&dst](auto& a) {
-		dst.send_packet(a);
-		return true;
-	}),
-	    ...);
+	for (int i = 1; i < 255; i++) {
+		src.reg_handler(i, [&dst, i](std::span<uint8_t> data) {
+			dst.send_packet(i, data);
+			return true;
+		});
+	}
 }
 
 int main(int argc, char* argv[])
@@ -32,22 +34,8 @@ int main(int argc, char* argv[])
 		return false;
 	});
 
-	proxy_conn.reg_handler<net::packet::damage_player>([&slot, &server_conn](auto& dmg) {
-		if (dmg.client_id != slot) {
-			dmg.damage *= 100;
-			dmg.reason.reasons.at(0) = 0;
-
-			dmg.reason.reasons[net::packet::death_reason::reason::Custom] = true;
-			dmg.reason.custom = "killed by server insecurity";
-
-			server_conn.send_packet(dmg);
-			return true;
-		}
-		return false;
-	});
-
-	forward_packets(server_conn, proxy_conn, std::make_integer_sequence<uint8_t, 255> {});
-	forward_packets(proxy_conn, server_conn, std::make_integer_sequence<uint8_t, 255> {});
+	forward_packets(server_conn, proxy_conn);
+	forward_packets(proxy_conn, server_conn);
 
 	auto handle_loop = [](net::conn& c) {
 		for (;;) {
@@ -57,6 +45,9 @@ int main(int argc, char* argv[])
 
 	std::thread server_thread(handle_loop, std::ref(server_conn));
 	std::thread proxy_thread(handle_loop, std::ref(proxy_conn));
+
+	while (1) {
+	}
 
 	return 0;
 }

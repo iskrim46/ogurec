@@ -17,6 +17,7 @@
 #include <zlib.h>
 
 #include "types.hpp"
+#include "util/io.hpp"
 
 namespace net {
 
@@ -27,28 +28,22 @@ using packet_header = std::tuple<uint8_t, uint16_t>;
 template <packet T>
 void decode_packet(std::span<uint8_t> payload, T& t)
 {
-	std::size_t offset = 0;
+	std::size_t len = 0;
 
-	boost::pfr::for_each_field(t, [&payload, &offset](auto& field, int i) {
-		if (offset >= payload.size()) {
-			throw std::runtime_error("Received invalid packet");
-		}
-		offset += decode_field(payload.subspan(offset), field);
-	});
+	auto rd = io::serialized_io(io::buffered_io { payload });
+	len = rd.read(t);
 
-	if (offset < payload.size()) {
-		throw std::runtime_error(std::format("{}: {}", offset, payload.size()));
+	if (len != payload.size()) {
+		throw std::runtime_error(std::format("{}: {}", len, payload.size()));
 	}
 }
 
 template <packet T>
-std::vector<uint8_t> encode_raw_packet(T& t)
+std::vector<uint8_t> encode_packet_impl(T& t)
 {
 	std::vector<uint8_t> payload;
-
-	boost::pfr::for_each_field(t, [&payload](auto& field) {
-		encode_field(payload, field);
-	});
+	auto wt = io::serialized_io(io::buffered_io { payload });
+	wt.write(t);
 
 	return payload;
 }
@@ -56,7 +51,7 @@ std::vector<uint8_t> encode_raw_packet(T& t)
 template <packet T>
 std::vector<uint8_t> encode_packet(T& t)
 {
-	return encode_raw_packet(t);
+	return encode_packet_impl(t);
 }
 
 template <compressed_packet T>
@@ -69,7 +64,7 @@ std::vector<uint8_t> encode_packet(T& t)
 	int ret, flush;
 	z_stream strm;
 
-	auto raw_payload = encode_raw_packet(t);
+	auto raw_payload = encode_packet_impl(t);
 
 	strm.zalloc = Z_NULL;
 	strm.zfree = Z_NULL;

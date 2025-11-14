@@ -23,7 +23,7 @@
 namespace net {
 
 class client {
-	struct sockaddr_in server_address { };
+	struct sockaddr_in server_address {};
 
 public:
 	client(std::string hostname, int port)
