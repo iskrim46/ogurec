@@ -41,6 +41,8 @@ public:
 	{
 	}
 
+	struct eof {};
+
 	file_io(std::string filename)
 	    : fd(open(filename.c_str(), O_RDWR))
 	{
@@ -56,13 +58,21 @@ public:
 	ssize_t read_data(char* buf, size_t nbytes)
 	{
 		auto bytes = ::read(fd, buf, nbytes);
+		if (bytes == EOF) {
+			throw eof{};
+		}
+
 		assert(bytes >= 0);
 		return bytes;
 	}
 
 	ssize_t write_data(const char* buf, size_t nbytes)
 	{
-		auto bytes = ::write(fd, buf, nbytes);
+		auto bytes = ::write(fd, buf, nbytes);		
+		if (bytes == EOF) {
+			throw eof{};
+		}
+		
 		assert(bytes >= 0);
 		return bytes;
 	}
@@ -117,7 +127,7 @@ public:
 	ssize_t read(T& f)
 	{
 		auto bytes = io.read_data(reinterpret_cast<char*>(&f), sizeof(T));
-		f = to_little(f);
+		//f = to_little(f);
 		return bytes;
 	}
 
@@ -158,21 +168,21 @@ public:
 	ssize_t write(const T f)
 	{
 		auto x = to_little(f);
-		return io.write_data(reinterpret_cast<char*>(&x), sizeof(T));
+		return io.write_data(reinterpret_cast<const char*>(&x), sizeof(T));
 	}
 
 	template <std::floating_point T>
 	ssize_t write(const T f)
 	{
 		// FIXME: endianness
-		return io.write_data(reinterpret_cast<char*>(&f), sizeof(T));
+		return io.write_data(reinterpret_cast<const char*>(&f), sizeof(T));
 	}
 
 	ssize_t write(const std::string f)
 	{
 		// FIXME: varint
-		auto bytes = write(f.size());
-		bytes += io.write_data(f.data(), f.size());
+		auto bytes = write(uint8_t(f.size()));
+		bytes += io.write_data(f.c_str(), f.size());
 		return bytes;
 	}
 

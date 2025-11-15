@@ -26,10 +26,10 @@ class client {
 	struct sockaddr_in server_address {};
 
 public:
-	client(std::string hostname, int port)
+	client(std::string ip, int port)
 	{
 		server_address.sin_family = AF_INET;
-		inet_pton(AF_INET, hostname.c_str(), &server_address.sin_addr);
+		inet_pton(AF_INET, ip.c_str(), &server_address.sin_addr);
 		server_address.sin_port = htons(port);
 	}
 

@@ -1,11 +1,14 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
 #include <cstring>
 #include <string>
 #include <unistd.h>
+#include <vector>
 
 #include "util/bitset.hpp"
+#include "util/io.hpp"
 #include "version.hpp"
 
 namespace net {
@@ -22,25 +25,41 @@ concept compressed_packet = packet<T> && requires(T x) { x.compressed; };
 template <class T>
 concept netmodule = requires(T x) { x.module_id; };
 
-struct nstring : std::string {
-	enum : uint8_t {
+struct nstring {
+	enum ns_type : uint8_t {
 		Literal,
 		Formattable,
 		LocalizationKey,
-	} mode;
+	} type;
 
-	std::string s;
+	std::string text;
+	std::vector<std::string> substitutions;
 
-	nstring(std::string&& s)
-	    : mode(Literal)
-	    , s(s)
-	{
+	template <class T>
+	ssize_t read(io::serialized_io<T>& io) {
+		uint8_t t;
+		auto offset = io.read(t);
+		type = (ns_type(t));
+
+		offset += io.read(text);
+		
+		uint8_t subs_len;
+		offset += io.read(subs_len);
+		if (subs_len > 0) {
+			substitutions.resize(subs_len);
+			io.read(substitutions);
+		}
+		
+		return offset;
 	}
-
-	nstring(std::string& s)
-	    : mode(Literal)
-	    , s(s)
-	{
+	
+	template <class T>
+	ssize_t write(io::serialized_io<T>& io) {
+		auto offset = io.write(uint8_t(type));
+		offset += io.write(text);
+		offset += io.write(uint8_t(substitutions.size()));
+		offset += io.write(substitutions);
+		return offset;
 	}
 };
 
@@ -48,6 +67,12 @@ struct rgb {
 	uint8_t r;
 	uint8_t g;
 	uint8_t b;
+};
+
+template<class T>
+struct vec2 {
+	T x;
+	T y;
 };
 
 struct death_reason {
@@ -209,6 +234,28 @@ struct player_health {
 	uint16_t max;
 };
 
+struct drop_item {
+	static constexpr uint8_t packet_id = 21;
+
+	int16_t old_id;
+
+	vec2<float> position;
+	vec2<float> velocity;
+	int16_t stack;
+	uint8_t prefix;
+	bool own_ignore;
+
+	int16_t new_id;
+};
+
+struct player_zones {
+	static constexpr uint8_t packet_id = 36;
+
+	uint8_t client_id;
+	uint32_t zone_flags;
+	uint8_t zone_flags2;
+};
+
 struct request_password {
 	static constexpr uint8_t packet_id = 37;
 };
@@ -264,22 +311,14 @@ struct tower_powers {
 	uint16_t solar, nebula, vertex, stardust;
 };
 
-struct monster_types {
-	static constexpr uint8_t packet_id = 136;
-
-	std::array<std::array<uint16_t, 3>, 2> types;
-};
-
 struct connection_completed {
 	static constexpr uint8_t packet_id = 129;
 };
 
-struct player_zones {
-	static constexpr uint8_t packet_id = 36;
+struct monster_types {
+	static constexpr uint8_t packet_id = 136;
 
-	uint8_t client_id;
-	uint32_t zone_flags;
-	uint8_t zone_flags2;
+	std::array<std::array<uint16_t, 3>, 2> types;
 };
 
 struct player_loadout {
@@ -301,9 +340,18 @@ struct damage_player {
 	int8_t cooldown_counter;
 };
 
+// NetModules
+
+struct client_text {
+	static constexpr uint8_t module_id = 1;
+    
+	nstring command;
+    nstring text;
+};
+
 inline nstring operator""_ns(const char* str, std::size_t)
 {
-	return nstring(str);
+	return nstring{nstring::Literal, str};
 }
 
 }

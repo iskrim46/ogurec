@@ -86,12 +86,6 @@ public:
 		});
 	}
 
-	template <packet::packet T>
-	void send_packet(T p)
-	{
-		send_packet(T::packet_id, encode_packet(p));
-	}
-
 	void send_packet(uint8_t id, std::span<uint8_t> payload)
 	{
 		std::vector<uint8_t> packet_data;
@@ -104,6 +98,13 @@ public:
 		}
 
 		rw.write(packet_data);
+	}
+
+	template <packet::packet T>
+	void send_packet(T p)
+	{
+		auto payload = encode_packet(p);
+		send_packet(T::packet_id, payload);
 	}
 
 	bool handle_netmodule(std::span<uint8_t> payload)
@@ -128,29 +129,33 @@ public:
 
 	bool handle()
 	{
-		auto [id, len] = read_header();
-		if (id == 0) {
-			return false;
-		}
-
-		std::vector<uint8_t> payload(len);
-		rw.read(payload);
-
-		// got netmodule
-		if (id == 82) {
-			return handle_netmodule(payload);
-		}
-
-		if (handlers[id].size() <= 0) {
-			return false;
-		}
-
-		for (auto& h : handlers[id]) {
-			if (h(payload) == true) {
-				break;
+		try {
+			auto [id, len] = read_header();
+			if (id == 0) {
+				return false;
 			}
+
+			std::vector<uint8_t> payload(len);
+			rw.read(payload);
+
+			// got netmodule
+			if (id == 82) {
+				return handle_netmodule(payload);
+			}
+
+			if (handlers[id].size() <= 0) {
+				return false;
+			}
+
+			for (auto& h : handlers[id]) {
+				if (h(payload) == true) {
+					break;
+				}
+			}
+			return true;
+		} catch (io::file_io::eof e) {
+			return false;
 		}
-		return true;
 	}
 };
 }
