@@ -1,12 +1,9 @@
 #pragma once
 
-#include <array>
 #include <cstdint>
 #include <cstdio>
 #include <fcntl.h>
 #include <filesystem>
-#include <fstream>
-#include <iostream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -19,27 +16,63 @@
 namespace file {
 
 class world {
-	int32_t version;
-	// metadata meta;
+	// TODO: World, Player and Map files probably share similar(or the same) header format.
+	// If so, move this into file/header.hpp, and defile `struct header : file::header` here
+	struct header {
+		int32_t version;
+		metadata meta;
+		std::vector<int32_t> positions;
+		bitset<0> importance;
+		
 
-	std::vector<uint32_t> positions;
-	bitset<0> importance;
+		ssize_t read(io::serialized_file f)
+		{
+			auto bytes = f.read(version);
 
-	int32_t seed;
-	std::array<uint8_t, 16> guid;
-	int32_t worldID;
-	int32_t world_left;
-	int32_t world_right;
-	int32_t world_top;
-	int32_t world_botton;
-	int32_t height;
-	int32_t width;
+			if (version < 88 || version > terraria_version) {
+				throw std::runtime_error("unsupported world version");
+			}
+
+			if (version >= 135) {
+				bytes += f.read(meta);
+				if (meta.ftype != metadata::filetype::World) {
+					throw std::runtime_error("unexpected relogic file format");
+				}
+			} else {
+				throw std::runtime_error("unimplemented");
+			}
+
+			int16_t positions_size;
+			bytes += f.read(positions_size);
+			positions.resize(positions_size);
+			bytes += f.read(positions);
+			
+			int16_t importance_size;
+			bytes += f.read(importance_size);
+			importance.resize(bits_ceil(importance_size));
+			bytes += f.read(importance);
+			return bytes;
+		}
+	};
+	
+	enum file_positions {
+		FileHeaderEnd,
+		HeaderEnd,
+		WorldTilesEnd,
+		ChestsEnd,
+		SignsEnd,
+		NPCsEnd,
+		DummiesEnd, // Terraria[116;122)
+		TileEntitiesEnd = DummiesEnd,
+		WeightedPressurePlatesEnd,
+		TownManagerEnd,
+		BestiaryEnd,
+		CreativePowersEnd,
+	};
+
+	header hdr;
 
 public:
-	void load_header(std::ifstream& f)
-	{
-	}
-
 	world(std::string filename)
 	{
 		if (!std::filesystem::exists(filename)) {
@@ -47,17 +80,9 @@ public:
 		}
 		auto rw = io::serialized_io(io::file_io { filename });
 
-		rw.read(version);
-		if (version <= 88 || version > terraria_version) {
-			throw std::runtime_error("invalid world file version");
-		}
-		std::cout << version << std::endl;
-		metadata meta;
-
-		rw.read(meta);
-
-		if (meta.ftype != filetype::World) {
-			throw std::runtime_error("expected world file");
+		auto offset = rw.read(hdr);
+		if (offset != hdr.positions[file_positions::FileHeaderEnd]) {
+			throw std::runtime_error("currupted file!");
 		}
 	}
 };

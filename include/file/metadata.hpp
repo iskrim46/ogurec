@@ -8,18 +8,19 @@
 
 namespace file {
 
-enum class filetype : uint8_t {
-	Map = 1,
-	World,
-	Player,
-	TOTAL,
-};
 
 struct metadata {
 	static constexpr auto magic = 27981915666277746uL;
 	static constexpr auto magic_mask = 0xFFFFFFFFFFFFFFuL;
 	static constexpr auto size = 20;
 
+	enum class filetype : uint8_t {
+		Map = 1,
+		World,
+		Player,
+		TOTAL,
+	};
+	
 	enum class flags {
 		Favorite,
 	};

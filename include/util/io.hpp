@@ -209,4 +209,6 @@ public:
 	}
 };
 
+using serialized_file = serialized_io<file_io>;
+
 }
